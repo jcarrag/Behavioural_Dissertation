@@ -10,6 +10,16 @@ html, body {
     background: #ececec;
     box-shadow: 0 2px 1px rgba(0, 0, 0, 0.5);
     margin-top: 10%;
+    margin-right: 2.5%; /* Add space between cards, can't be more than width */
+    margin-left: 2.5%;
+}
+
+.col-xs-3 {
+    width: 20%;
+}
+
+._cumulative {
+    display: show;
 }
 
 p {

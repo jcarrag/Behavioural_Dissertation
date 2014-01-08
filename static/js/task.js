@@ -2,6 +2,7 @@
  * Requires:
  *     psiturk.js
  *     utils.js
+ *     twister.js
  */
 
 // Initalize psiturk object
@@ -87,8 +88,11 @@ var Instructions = function(pages) {
 
 var TestPhase = function() {
     // Globals
+    var m = new MersenneTwister();
     var cardSelected = false;
-    var initialMu = 50; // Starting value
+    // Randomise mu starting values: average 50, but not all 50. Values bound by 55 and init1 (init1 picked randomly between 55 and 65)
+    var initialMu = [init1 = m.random() * (65 - 55) + 55, init2 = 50 - (init1 - 50), init3 = init1 - (init1 - 50) / 2, init4 = 50 - (init3 - 50)]; // Starting value
+    var cumulative = 0;
     var data = {};
     var trial = 1; // Initialising trial
     var maxTrial = 10; // Number of trials
@@ -108,8 +112,8 @@ var TestPhase = function() {
         var x = 0, y = 0, rds, c;
 
         do {
-        x = Math.random()*2-1;
-        y = Math.random()*2-1;
+        x = m.random()*2-1;
+        y = m.random()*2-1;
         rds = x*x + y*y;
         }
         while (rds == 0 || rds > 1)
@@ -205,7 +209,7 @@ var TestPhase = function() {
                     // Arbitrary, set it to initial position. 'R' unnecessary
                     for (var i = 1; i <= 4; i++) {
                         data[trial - 1]['card' + i] = {}; // Initialising sub-level
-                        data[trial - 1]['card' + i]['mu'] = initialMu;
+                        data[trial - 1]['card' + i]['mu'] = initialMu[i - 1];
                     }
                 }
                 // Get and set cards
@@ -263,6 +267,10 @@ var TestPhase = function() {
                     // Re-hide all new cards and messages
                     $('._card p').hide();
                     $('ul.list-unstyled li').hide();
+
+                    // Update cumulative scorer
+                    cumulative = cumulative + data[trial]['chosen_value'];
+                    $('._cumulative').html('<h1>Total: ' + cumulative + '</h1>');
 
                     // Task finish condition
                     if (trial == maxTrial) {
