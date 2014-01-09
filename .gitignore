@@ -39,3 +39,5 @@ Thumbs.db
 # Other #
 #########
 .idea/workspace.xml
+participants.db
+.idea/
