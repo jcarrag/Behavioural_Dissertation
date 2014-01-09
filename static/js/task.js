@@ -91,12 +91,13 @@ var TestPhase = function() {
     var m = new MersenneTwister();
     var cardSelected = false;
     // Randomise mu starting values: average 50, but not all 50. Values bound by 55 and init1 (init1 picked randomly between 55 and 65)
+    var init1, init2, init3, init4; // Declare locally to prevent becoming global
     var initialMu = [init1 = m.random() * (65 - 55) + 55, init2 = 50 - (init1 - 50), init3 = init1 - (init1 - 50) / 2, init4 = 50 - (init3 - 50)]; // Starting value
     var cumulative = 0;
     var data = {};
     var trial = 1; // Initialising trial
     var maxTrial = 10; // Number of trials
-    var condition= psiTurk.taskdata.get('condition'); // Get condition from server
+    var condition= psiTurk.taskdata.get('condition') + 1; // Get condition from server, add 1 to start from 1
 
     // Structure of data:
     //  data ==== trialX ==== 'chosen_card'
@@ -107,6 +108,12 @@ var TestPhase = function() {
     //                   ==== 'cardX' ==== 'R'
     //                                ==== 'mu'
 
+    // Experiment design (factors and levels): 3 x 2 x 5: forgone x dynamic x seed
+    // E.g.: 'condition'=1: forgone=1 (show one) -- dynamic=1 (dynamic) -- seed=1 (1st seed)
+    //       'condition'=2: forgone=2 (show max) -- dynamic=1 (dynamic) -- seed=1 (1st seed)
+    //       'condition'=3: forgone=3 (show all) -- dynamic=1 (dynamic) -- seed=1 (1st seed)
+    //       'condition'=4: forgone=1 (show one) -- dynamic=2 (non-dynamic) -- seed=1 (1st seed) etc.
+
     // Normal random number generator; Box-Muller transform (ignoring second random value returned 'y')
     var rnd = function rnd(mean, stDev) {
         var x = 0, y = 0, rds, c;
@@ -116,7 +123,7 @@ var TestPhase = function() {
         y = m.random()*2-1;
         rds = x*x + y*y;
         }
-        while (rds == 0 || rds > 1)
+        while (rds == 0 || rds > 1);
 
         c = Math.sqrt(-2*Math.log(rds)/rds);
 
@@ -135,24 +142,31 @@ var TestPhase = function() {
     // * delta1[j](t-1) is an indicator function with value 1 if deck j was chosen on trial t-1 and 0 otherwise
     // * delta2[j](t-1) is an indicator function with value 1 if deck j was not chosen on trial t-1 and 0 otherwise
     // * psi[j](t) is a random Normal variate with mean 0 and standard deviation sigma[p]
+
     // calcR argument is a string: 'cardX'
     var calcR = function(card) {
-        // Indicator function assignment
-            // Will be NaN on first trial as no prior trials to compare to... Need to compare IDs in case of duplicate numbers
-            // Comparing int of html ID tag against string of data element, so need to strip string and turn to int
-        var delta1, delta2;
-            if (data[trial - 1]['chosen_card'] == parseInt(card.replace('card',''))) {
-                delta1 = 1;
-                delta2 = 0;
+        var delta1, delta2; // Indicator function assignment
+            // Dynamic condition: use the delta indicator functions
+            if (condition == (1 || 2 || 3)) {
+                // Will be NaN on first trial as no prior trials to compare to... Need to compare IDs in case of duplicate numbers
+                // Comparing int of html ID tag against string of data element, so need to strip string and turn to int
+                if (data[trial - 1]['chosen_card'] == parseInt(card.replace('card',''))) {
+                    delta1 = 1;
+                    delta2 = 0;
+                }
+                else {
+                    delta1 = 0;
+                    delta2 = 1;
+                }
             }
+            // Non-dynamic condition: ignore the delta indicator functions CHANGE TO ELSE IF AND ADD SPECIFIC CONDITIONS
             else {
-                delta1 = 0;
-                delta2 = 1;
+                delta1 = delta2 = 0;
             }
         //console.log(card, 'd1=' + delta1, 'd2=' + delta2, 't-1_chosen=' + data[trial - 1]['chosen_card']);
-        mu = data[trial - 1][card]['mu'] - (6 * delta1) + (2 * delta2) + rnd(0, 1);
+        var mu = data[trial - 1][card]['mu'] - (6 * delta1) + (2 * delta2) + rnd(0, 1);
         //console.log('card='+card,'mu='+mu, 'data[trial - 1][card]["mu"]='+data[trial - 1][card]['mu'], '(6 * delta1)='+(6 * delta1), '(2 * delta2)='+(2 * delta2));
-        R = mu + rnd(0, 1);
+        var R = mu + rnd(0, 1);
 
         return {R: Math.round(R),
                 mu: mu
@@ -233,24 +247,25 @@ var TestPhase = function() {
                 data[trial]['max_value'] = Math.max(data[trial]['card1']['R'], data[trial]['card2']['R'], data[trial]['card3']['R'], data[trial]['card4']['R']);
                 data[trial]['trialNumber'] = trial;
                 data[trial]['condition'] = condition;
+                data[trial]['cumulative'] = cumulative = cumulative + data[trial]['chosen_value'];
 
                 // Note: timings are not additive: all absolute and begin at 0
-                // Condition 0: unnecessary to code, (show card picked)
-                // Condition 1: (show card picked) and max alternative, wait hiddenTime
-                if (condition == 1) {
+                // Foregone condition 1: unnecessary to code, (show card picked)
+                // Foregone condition 2: (show card picked) and max alternative, wait hiddenTime
+                if (condition == (2 || 5)) {
                     setTimeout(function() {
                         $('ul.list-unstyled li').html('The maximum from this trial was ' + data[trial]['max_value']).slideDown();
                     }, 1000);
                 }
-                // Condition 2: (show card picked) followed by all remaining, hidden cards. Wait hiddenTime
-                else if (condition == 2) {
+                // Foregone condition 3: (show card picked) followed by all remaining, hidden cards. Wait hiddenTime
+                else if (condition == (3 || 6)) {
                     setTimeout(function() {
                         $('._card :hidden').slideDown();
                     }, 1000);
                 }
 
                 // Save data to psiTurk object (via an array)
-                trialSet = [];
+                var trialSet = [];
                 trialSet.push(data[trial]['chosen_card'], data[trial]['chosen_value'], data[trial]['max_value'],
                               data[trial]['trialNumber'], data[trial]['condition']);
                 for (var y = 1; y <= 4; y++) {
@@ -269,7 +284,6 @@ var TestPhase = function() {
                     $('ul.list-unstyled li').hide();
 
                     // Update cumulative scorer
-                    cumulative = cumulative + data[trial]['chosen_value'];
                     $('._cumulative').html('<h1>Total: ' + cumulative + '</h1>');
 
                     // Task finish condition
