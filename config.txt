@@ -33,7 +33,7 @@ num_workers = -1
 
 [Task Parameters]
 code_version = 1.0
-num_conds = 6
+num_conds = 30
 num_counters = 1
 use_debriefing = 1
 

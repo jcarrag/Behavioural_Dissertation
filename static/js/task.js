@@ -97,7 +97,7 @@ var TestPhase = function() {
     var data = {};
     var trial = 1; // Initialising trial
     var maxTrial = 10; // Number of trials
-    var condition= psiTurk.taskdata.get('condition') + 1; // Get condition from server, add 1 to start from 1
+    var condition= psiTurk.taskdata.get('condition'); // Get condition from server
 
     // Structure of data:
     //  data ==== trialX ==== 'chosen_card'
@@ -112,7 +112,36 @@ var TestPhase = function() {
     // E.g.: 'condition'=1: forgone=1 (show one) -- dynamic=1 (dynamic) -- seed=1 (1st seed)
     //       'condition'=2: forgone=2 (show max) -- dynamic=1 (dynamic) -- seed=1 (1st seed)
     //       'condition'=3: forgone=3 (show all) -- dynamic=1 (dynamic) -- seed=1 (1st seed)
-    //       'condition'=4: forgone=1 (show one) -- dynamic=2 (non-dynamic) -- seed=1 (1st seed) etc.
+    //       'condition'=4: forgone=1 (show one) -- dynamic=2 (non-dynamic) -- seed=1 (1st seed)
+    //       'condition'=5: forgone=2 (show max) -- dynamic=2 (non-dynamic) -- seed=1 (1st seed)
+    //       'condition'=6: forgone=3 (show all) -- dynamic=2 (non-dynamic) -- seed=1 (1st seed)
+    //       'condition'=7: forgone=1 (show one) -- dynamic=1 (dynamic) -- seed=2 (2nd seed) etc.
+
+    // Create a matrix of all conditions [1, 1, 1; 2, 1, 1; 3, 1, 1; 1, 2, 1 etc. Then in the manipulation if-blocks
+    // compare relevant column and relevant row (psiTurk.condition + 1) against the manipulation if-condition:
+    // e.g. For forgone=2 (show max) compare "2" to column=1, row=psiTurk.condition (careful of index), if True then deploy.
+
+    // Function to generate matrix of all conditions
+    var genCol = function() {
+        // The three individual columns
+        var col1 = [], col2 = [], col3 = [];
+        for (var n = 0; n < 10; n++) {col1 = col1.concat([1, 2, 3])}
+        for (n = 0; n < 15; n++) {col2 = col2.concat([1, 1, 1, 2, 2, 2])}
+        for (n = 1; n < 6; n++) {col3 = col3.concat([n, n, n, n, n, n])} // Careful: n starts at 1
+        // Converting three separate 1D arrays into one 3D array
+        var cols = [col1, col2, col3];
+        var arr = new Array();
+        for (var i = 0; i <= cols.length - 1; i++) {
+             arr[i] = new Array();
+             for (var j = 0; j <= col1.length - 1; j++) {
+                 arr[i][j] = cols[i][j];
+             }
+        }
+        return arr;
+    };
+
+    // Create the condition matrix
+    var arr = genCol();
 
     // Normal random number generator; Box-Muller transform (ignoring second random value returned 'y')
     var rnd = function rnd(mean, stDev) {
@@ -146,8 +175,8 @@ var TestPhase = function() {
     // calcR argument is a string: 'cardX'
     var calcR = function(card) {
         var delta1, delta2; // Indicator function assignment
-            // Dynamic condition: use the delta indicator functions
-            if (condition == (1 || 2 || 3)) {
+            // Dynamic condition (1): use the delta indicator functions
+            if (arr[1][condition] == 1) {
                 // Will be NaN on first trial as no prior trials to compare to... Need to compare IDs in case of duplicate numbers
                 // Comparing int of html ID tag against string of data element, so need to strip string and turn to int
                 if (data[trial - 1]['chosen_card'] == parseInt(card.replace('card',''))) {
@@ -159,7 +188,7 @@ var TestPhase = function() {
                     delta2 = 1;
                 }
             }
-            // Non-dynamic condition: ignore the delta indicator functions CHANGE TO ELSE IF AND ADD SPECIFIC CONDITIONS
+            // Non-dynamic condition (2): ignore the delta indicator functions CHANGE TO ELSE IF AND ADD SPECIFIC CONDITIONS
             else {
                 delta1 = delta2 = 0;
             }
@@ -236,6 +265,7 @@ var TestPhase = function() {
                 }
                 console.log('card_sum=' + (data[trial]['card1']['R'] + data[trial]['card2']['R'] + data[trial]['card3']['R'] + data[trial]['card4']['R']));
                 console.log('Trial=' + trial);
+                console.log('Condition= ' + condition);
 
                 // Show card picked
                 var card = $(this).find('p', 'first');
@@ -252,13 +282,13 @@ var TestPhase = function() {
                 // Note: timings are not additive: all absolute and begin at 0
                 // Foregone condition 1: unnecessary to code, (show card picked)
                 // Foregone condition 2: (show card picked) and max alternative, wait hiddenTime
-                if (condition == (2 || 5)) {
+                if (arr[0][condition] == 2) {
                     setTimeout(function() {
                         $('ul.list-unstyled li').html('The maximum from this trial was ' + data[trial]['max_value']).slideDown();
                     }, 1000);
                 }
                 // Foregone condition 3: (show card picked) followed by all remaining, hidden cards. Wait hiddenTime
-                else if (condition == (3 || 6)) {
+                else if (arr[0][condition] == 3) {
                     setTimeout(function() {
                         $('._card :hidden').slideDown();
                     }, 1000);
