@@ -87,17 +87,6 @@ var Instructions = function(pages) {
 ********************/
 
 var TestPhase = function() {
-    // Globals
-    var m = new MersenneTwister();
-    var cardSelected = false;
-    // Randomise mu starting values: average 50, but not all 50. Values bound by 55 and init1 (init1 picked randomly between 55 and 65)
-    var init1, init2, init3, init4; // Declare locally to prevent becoming global
-    var initialMu = [init1 = m.random() * (65 - 55) + 55, init2 = 50 - (init1 - 50), init3 = init1 - (init1 - 50) / 2, init4 = 50 - (init3 - 50)]; // Starting value
-    var cumulative = 0;
-    var data = {};
-    var trial = 1; // Initialising trial
-    var maxTrial = 10; // Number of trials
-    var condition= psiTurk.taskdata.get('condition'); // Get condition from server
 
     // Structure of data:
     //  data ==== trialX ==== 'chosen_card'
@@ -107,6 +96,21 @@ var TestPhase = function() {
     //                   ==== 'condition'
     //                   ==== 'cardX' ==== 'R'
     //                                ==== 'mu'
+
+    // In order to randomise card order presentation need to have randomly permuted array of card indexes...
+    var shuffle = function(array) {
+        var m = array.length, t, i;
+        while (m) {
+            i = Math.floor(Math.random() * m--);
+            t = array[m];
+            array[m] = array[i];
+            array[i] = t;
+        }
+        return array;
+    };
+    // In order to work back from this level of abstraction need to use index of shuffDeck (an index of an index...)
+    // Premised on actual number of deck shown (i.e. leftmost card [= 1]) being irrelevant and can be ignored so long as all clicks etc. converted back to unrandomised order (i.e. by shuffDeck.indexOf(randomDeckNo) + 1)
+    var shuffDeck = shuffle([1, 2, 3, 4]);
 
     // Experiment design (factors and levels): 3 x 2 x 5: forgone x dynamic x seed
     // E.g.: 'condition'=1: forgone=1 (show one) -- dynamic=1 (dynamic) -- seed=1 (1st seed)
@@ -143,6 +147,19 @@ var TestPhase = function() {
     // Create the condition matrix
     var arr = genCol();
 
+    // Globals
+    var condition= psiTurk.taskdata.get('condition'); // Get condition from server (starts at 0)
+    var seeds = [100, 200, 300, 400, 500];
+    var m = new MersenneTwister(seeds[arr[2][condition] - 1]);
+    var cardSelected = false;
+    // Randomise mu starting values: average 50, but not all 50. Values bound by 55 and init1 (init1 picked randomly between 55 and 65)
+    var init1, init2, init3, init4; // Declare locally to prevent becoming global
+    var initialMu = [init1 = m.random() * (65 - 55) + 55, init2 = 50 - (init1 - 50), init3 = init1 - (init1 - 50) / 2, init4 = 50 - (init3 - 50)]; // Starting value
+    var cumulative = 0;
+    var data = {};
+    var trial = 1; // Initialising trial
+    var maxTrial = 5; // Number of trials
+
     // Normal random number generator; Box-Muller transform (ignoring second random value returned 'y')
     var rnd = function rnd(mean, stDev) {
         var x = 0, y = 0, rds, c;
@@ -154,7 +171,7 @@ var TestPhase = function() {
         }
         while (rds == 0 || rds > 1);
 
-        c = Math.sqrt(-2*Math.log(rds)/rds);
+        c = Math.sqrt(-2 * Math.log(rds) / rds);
 
         return x * c * stDev + mean;
     };
@@ -178,8 +195,8 @@ var TestPhase = function() {
             // Dynamic condition (1): use the delta indicator functions
             if (arr[1][condition] == 1) {
                 // Will be NaN on first trial as no prior trials to compare to... Need to compare IDs in case of duplicate numbers
-                // Comparing int of html ID tag against string of data element, so need to strip string and turn to int
-                if (data[trial - 1]['chosen_card'] == parseInt(card.replace('card',''))) {
+                // Comparing int of html ID tag, converted from deck to data, against string of data element, so need to strip string and turn to int
+                if (data[trial - 1]['chosen_card'] == shuffDeck.indexOf(parseInt(card.replace('card',''))) + 1) {
                     delta1 = 1;
                     delta2 = 0;
                 }
@@ -202,15 +219,6 @@ var TestPhase = function() {
         };
     };
 
-        // Function to generate random numbers
-//      var genNumbers = function() {
-//          for (var i = 1; i <= 4; i++) {
-//              data[trial]['card' + i] = {};
-//              data[trial]['card' + i]['R'] = Math.floor(Math.random()*51);
-//          }
-//        return data[trial];
-//      };
-
     //  Function to generate numbers, stored in data. Have to initialise all levels of data. New data[trial] made each trial
     var genNumbers = function() {
         data[trial] = {};
@@ -231,10 +239,10 @@ var TestPhase = function() {
         }
     };
 
-    // Function to set cards,input= data[trial]
+    // Function to set cards,input= data[trial], randomised using the shuffDeck array made earlier
     var setCards = function(values) {
-        for (var i = 1; i <= 4; i++) {
-            $('#' + i).html(values['card' + i]['R']);
+        for (var i = 0; i <= 3; i++) {
+            $('#' + (i + 1)).html(values['card' + shuffDeck[i]]['R']); // i + 1 because i = 0 (for index)
         }
     };
 
@@ -259,25 +267,27 @@ var TestPhase = function() {
                 data[trial] = genNumbers();
                 setCards(data[trial]);
 
-                // For testing- iterate through data and print to console OLD DATA
-                for (var x in data[trial]) {
-                    console.log(x, data[trial][x]);
-                }
-                console.log('card_sum=' + (data[trial]['card1']['R'] + data[trial]['card2']['R'] + data[trial]['card3']['R'] + data[trial]['card4']['R']));
-                console.log('Trial=' + trial);
-                console.log('Condition= ' + condition);
 
                 // Show card picked
                 var card = $(this).find('p', 'first');
                 card.slideDown();
 
-                // Record meta-information
-                data[trial]['chosen_card'] = parseInt(card.attr('id'));
-                data[trial]['chosen_value'] = parseInt($('#' + data[trial]['chosen_card']).html());
+                // Record meta-information. All data recorded from 'data' level (vs. abstracted and randomised 'deck' level [counterbalancing of deck presentation order])
+                data[trial]['chosen_card'] = shuffDeck.indexOf(parseInt(card.attr('id'))) + 1; // Randomised, so card.attr('id') no longer the same card & value as data[trial][cardX]. Going from deck --> data (level) so have to use indexOf + 1
+                data[trial]['chosen_value'] = parseInt($('#' + (shuffDeck[data[trial]['chosen_card'] - 1])).html()); // The opposite of 'chosen_card'; need to go from data --> deck
                 data[trial]['max_value'] = Math.max(data[trial]['card1']['R'], data[trial]['card2']['R'], data[trial]['card3']['R'], data[trial]['card4']['R']);
                 data[trial]['trialNumber'] = trial;
-                data[trial]['condition'] = condition;
+                data[trial]['condition'] = condition; // Starts at 0
                 data[trial]['cumulative'] = cumulative = cumulative + data[trial]['chosen_value'];
+
+                // For testing- iterate through data and print to console OLD DATA
+                for (var x in data[trial]) {
+                    console.log(x, data[trial][x]);
+                }
+                console.log('shuffDeck= ' + shuffDeck);
+                console.log('shuffDeck.indexOf= ' + (shuffDeck.indexOf(parseInt(card.attr('id'))) + 1), parseInt(card.attr('id')) );
+                console.log('Cumulative= ' + cumulative, 'data= ' + data[trial]['chosen_value']);
+                console.log('Condition= ' + condition);
 
                 // Note: timings are not additive: all absolute and begin at 0
                 // Foregone condition 1: unnecessary to code, (show card picked)
