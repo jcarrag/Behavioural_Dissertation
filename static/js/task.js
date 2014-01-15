@@ -19,6 +19,7 @@ psiTurk.preloadPages(pages);
 
 // Task object to keep track of the current phase
 var currentview;
+var demographic = []; // Need to be global
 
 
 /********************
@@ -44,7 +45,14 @@ var Instructions = function(pages) {
 	var next = function() {
 		psiTurk.showPage(instruction_pages[currentscreen]);
 		$('.continue').click(function() {
-			buttonPress();
+            var gender = $('form input[type=radio]:checked').val();
+            var age = parseInt($('form input[type=text]').val());
+            if (age && gender) {
+                demographic = [gender, age];
+			    buttonPress();
+            } else {
+                alert('Please select your gender and enter your age.')
+            }
 		});
 		
 		currentscreen = currentscreen + 1;
@@ -153,9 +161,6 @@ var TestPhase = function() {
     var m = new MersenneTwister(seeds[arr[2][condition] - 1]);
     var lambda = 0.9836;
     var cardSelected = false;
-    // Randomise mu starting values: average 50, but not all 50. Values bound by 55 and init1 (init1 picked randomly between 55 and 65)
-    var init1, init2, init3, init4; // Declare locally to prevent becoming global
-    var initialMu = [init1 = m.random() * (65 - 55) + 55, init2 = 50 - (init1 - 50), init3 = init1 - (init1 - 50) / 2, init4 = 50 - (init3 - 50)]; // Starting value
     var cumulative = 0;
     var data = {};
     var trial = 1; // Initialising trial
@@ -274,13 +279,16 @@ var TestPhase = function() {
                 card.slideDown();
 
                 // Record meta-information. All data recorded from 'data' level (vs. abstracted and randomised 'deck' level [counterbalancing of deck presentation order])
+                // Must add new added data to trialSet.push()
                 data[trial]['chosen_card'] = shuffDeck[parseInt(card.attr('id')) - 1]; // Randomised, so card.attr('id') no longer the same card & value as data[trial][cardX]. Going from deck --> data (level) so have to use indexOf + 1
                 data[trial]['chosen_value'] = data[trial]['card'+ data[trial]['chosen_card']]['R']; // The opposite of 'chosen_card'; need to go from data --> deck
                 data[trial]['max_value'] = Math.max(data[trial]['card1']['R'], data[trial]['card2']['R'], data[trial]['card3']['R'], data[trial]['card4']['R']);
                 data[trial]['trialNumber'] = trial;
                 data[trial]['condition'] = condition; // Starts at 0
                 data[trial]['cumulative'] = cumulative = cumulative + data[trial]['chosen_value'];
-		//data[trial]['permutation'] = for (var z in shuffDeck) {;
+		        data[trial]['permutation'] = shuffDeck;
+                data[trial]['gender'] = demographic[0];
+                data[trial]['age'] = demographic[1];
 
                 // For testing- iterate through data and print to console OLD DATA
                 for (var x in data[trial]) {
@@ -291,7 +299,7 @@ var TestPhase = function() {
                 console.log('Cumulative= ' + cumulative, 'data= ' + data[trial]['chosen_value']);
                 console.log('Condition= ' + condition);
                 console.log('Seed: ' + seeds[arr[2][condition] - 1]);
-		console.log('0mu: ', data[0]['card1']['mu'], data[0]['card2']['mu'], data[0]['card3']['mu'], data[0]['card4']['mu'])
+		        console.log('0mu: ', data[0]['card1']['mu'], data[0]['card2']['mu'], data[0]['card3']['mu'], data[0]['card4']['mu']);
 
 
                 // Note: timings are not additive: all absolute and begin at 0
@@ -312,7 +320,8 @@ var TestPhase = function() {
                 // Save data to psiTurk object (via an array)
                 var trialSet = [];
                 trialSet.push(data[trial]['chosen_card'], data[trial]['chosen_value'], data[trial]['max_value'],
-                              data[trial]['trialNumber'], data[trial]['condition']);
+                              data[trial]['trialNumber'], data[trial]['condition'], data[trial]['cumulative'],
+                              data[trial]['permutation'], data[trial]['gender'], data[trial]['age']);
                 for (var y = 1; y <= 4; y++) {
                     trialSet.push('Card ' + y + ' R:');
                     trialSet.push(data[trial]['card' + y]['R']);
