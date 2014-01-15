@@ -149,8 +149,9 @@ var TestPhase = function() {
 
     // Globals
     var condition= psiTurk.taskdata.get('condition'); // Get condition from server (starts at 0)
-    var seeds = [100, 200, 300, 400, 500];
+    var seeds = [72, 21, 26, 135, 332];
     var m = new MersenneTwister(seeds[arr[2][condition] - 1]);
+    var lambda = 0.9836;
     var cardSelected = false;
     // Randomise mu starting values: average 50, but not all 50. Values bound by 55 and init1 (init1 picked randomly between 55 and 65)
     var init1, init2, init3, init4; // Declare locally to prevent becoming global
@@ -210,9 +211,9 @@ var TestPhase = function() {
                 delta1 = delta2 = 0;
             }
         //console.log(card, 'd1=' + delta1, 'd2=' + delta2, 't-1_chosen=' + data[trial - 1]['chosen_card']);
-        var mu = data[trial - 1][card]['mu'] - (6 * delta1) + (2 * delta2) + rnd(0, 1);
+        var mu = lambda*data[trial - 1][card]['mu'] + (1 - lambda) * 50 - (6 * delta1) + (2 * delta2) + rnd(0, 2.8); // Includes weighted variable towards 50
         //console.log('card='+card,'mu='+mu, 'data[trial - 1][card]["mu"]='+data[trial - 1][card]['mu'], '(6 * delta1)='+(6 * delta1), '(2 * delta2)='+(2 * delta2));
-        var R = mu + rnd(0, 1);
+        var R = mu + rnd(0, 4);
 
         return {R: Math.round(R),
                 mu: mu
@@ -260,7 +261,7 @@ var TestPhase = function() {
                     // Arbitrary, set it to initial position. 'R' unnecessary
                     for (var i = 1; i <= 4; i++) {
                         data[trial - 1]['card' + i] = {}; // Initialising sub-level
-                        data[trial - 1]['card' + i]['mu'] = initialMu[i - 1];
+                        data[trial - 1]['card' + i]['mu'] = rnd(50, 10);
                     }
                 }
                 // Get and set cards
@@ -273,12 +274,13 @@ var TestPhase = function() {
                 card.slideDown();
 
                 // Record meta-information. All data recorded from 'data' level (vs. abstracted and randomised 'deck' level [counterbalancing of deck presentation order])
-                data[trial]['chosen_card'] = shuffDeck.indexOf(parseInt(card.attr('id'))) + 1; // Randomised, so card.attr('id') no longer the same card & value as data[trial][cardX]. Going from deck --> data (level) so have to use indexOf + 1
-                data[trial]['chosen_value'] = parseInt($('#' + (shuffDeck[data[trial]['chosen_card'] - 1])).html()); // The opposite of 'chosen_card'; need to go from data --> deck
+                data[trial]['chosen_card'] = shuffDeck[parseInt(card.attr('id')) - 1]; // Randomised, so card.attr('id') no longer the same card & value as data[trial][cardX]. Going from deck --> data (level) so have to use indexOf + 1
+                data[trial]['chosen_value'] = data[trial]['card'+ data[trial]['chosen_card']]['R']; // The opposite of 'chosen_card'; need to go from data --> deck
                 data[trial]['max_value'] = Math.max(data[trial]['card1']['R'], data[trial]['card2']['R'], data[trial]['card3']['R'], data[trial]['card4']['R']);
                 data[trial]['trialNumber'] = trial;
                 data[trial]['condition'] = condition; // Starts at 0
                 data[trial]['cumulative'] = cumulative = cumulative + data[trial]['chosen_value'];
+		//data[trial]['permutation'] = for (var z in shuffDeck) {;
 
                 // For testing- iterate through data and print to console OLD DATA
                 for (var x in data[trial]) {
@@ -288,6 +290,9 @@ var TestPhase = function() {
                 console.log('shuffDeck.indexOf= ' + (shuffDeck.indexOf(parseInt(card.attr('id'))) + 1), parseInt(card.attr('id')) );
                 console.log('Cumulative= ' + cumulative, 'data= ' + data[trial]['chosen_value']);
                 console.log('Condition= ' + condition);
+                console.log('Seed: ' + seeds[arr[2][condition] - 1]);
+		console.log('0mu: ', data[0]['card1']['mu'], data[0]['card2']['mu'], data[0]['card3']['mu'], data[0]['card4']['mu'])
+
 
                 // Note: timings are not additive: all absolute and begin at 0
                 // Foregone condition 1: unnecessary to code, (show card picked)
