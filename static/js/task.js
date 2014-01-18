@@ -19,7 +19,7 @@ psiTurk.preloadPages(pages);
 
 // Task object to keep track of the current phase
 var currentview;
-var demographic = []; // Need to be global
+var demographic = []; // Needs to be global
 
 
 /********************
@@ -40,13 +40,20 @@ var demographic = []; // Need to be global
 var Instructions = function(pages) {
 	var currentscreen = 0,
 	    timestamp;
-	    instruction_pages = pages; 
+	    instruction_pages = pages;
+
+    function isNumber(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
+    }
 	
 	var next = function() {
 		psiTurk.showPage(instruction_pages[currentscreen]);
 		$('.continue').click(function() {
             var gender = $('form input[type=radio]:checked').val();
-            var age = parseInt($('form input[type=text]').val());
+            // Make sure is a number
+            if (isNumber($('form input[type=text]').val())) {
+                var age = $('form input[type=text]').val();
+            }
             if (age && gender) {
                 demographic = [gender, age];
 			    buttonPress();
@@ -164,7 +171,7 @@ var TestPhase = function() {
     var cumulative = 0;
     var data = {};
     var trial = 1; // Initialising trial
-    var maxTrial = 5; // Number of trials
+    var maxTrial = 50; // Number of trials
 
     // Normal random number generator; Box-Muller transform (ignoring second random value returned 'y')
     var rnd = function rnd(mean, stDev) {
@@ -202,7 +209,7 @@ var TestPhase = function() {
             if (arr[1][condition] == 1) {
                 // Will be NaN on first trial as no prior trials to compare to... Need to compare IDs in case of duplicate numbers
                 // Comparing int of html ID tag, converted from deck to data, against string of data element, so need to strip string and turn to int
-                if (data[trial - 1]['chosen_card'] == shuffDeck.indexOf(parseInt(card.replace('card',''))) + 1) {
+                if (data[trial - 1]['chosen_card'] == parseInt(card.replace('card',''))) {
                     delta1 = 1;
                     delta2 = 0;
                 }
@@ -218,7 +225,7 @@ var TestPhase = function() {
         //console.log(card, 'd1=' + delta1, 'd2=' + delta2, 't-1_chosen=' + data[trial - 1]['chosen_card']);
         var mu = lambda*data[trial - 1][card]['mu'] + (1 - lambda) * 50 - (6 * delta1) + (2 * delta2) + rnd(0, 2.8); // Includes weighted variable towards 50
         //console.log('card='+card,'mu='+mu, 'data[trial - 1][card]["mu"]='+data[trial - 1][card]['mu'], '(6 * delta1)='+(6 * delta1), '(2 * delta2)='+(2 * delta2));
-        var R = mu + rnd(0, 4);
+        var R = mu + rnd(0, 4.0);
 
         return {R: Math.round(R),
                 mu: mu
@@ -295,8 +302,7 @@ var TestPhase = function() {
                     console.log(x, data[trial][x]);
                 }
                 console.log('shuffDeck= ' + shuffDeck);
-                console.log('shuffDeck.indexOf= ' + (shuffDeck.indexOf(parseInt(card.attr('id'))) + 1), parseInt(card.attr('id')) );
-                console.log('Cumulative= ' + cumulative, 'data= ' + data[trial]['chosen_value']);
+                console.log('Sum= ' + (data[trial]['card1']['R'] + data[trial]['card2']['R'] + data[trial]['card3']['R'] + data[trial]['card4']['R']), "Running mean: " + cumulative/trial);
                 console.log('Condition= ' + condition);
                 console.log('Seed: ' + seeds[arr[2][condition] - 1]);
 		        console.log('0mu: ', data[0]['card1']['mu'], data[0]['card2']['mu'], data[0]['card3']['mu'], data[0]['card4']['mu']);
