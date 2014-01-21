@@ -20,7 +20,29 @@ psiTurk.preloadPages(pages);
 // Task object to keep track of the current phase
 var currentview;
 var demographic = []; // Needs to be global
+var condition = psiTurk.taskdata.get('condition'); // Get condition from server (starts at 0)
 
+// Function to generate matrix of all conditions
+    var genCol = function() {
+        // The three individual columns
+        var col1 = [], col2 = [], col3 = [];
+        for (var n = 0; n < 10; n++) {col1 = col1.concat([1, 2, 3])}
+        for (n = 0; n < 15; n++) {col2 = col2.concat([1, 1, 1, 2, 2, 2])}
+        for (n = 1; n < 6; n++) {col3 = col3.concat([n, n, n, n, n, n])} // Careful: n starts at 1
+        // Converting three separate 1D arrays into one 3D array
+        var cols = [col1, col2, col3];
+        var arr = new Array();
+        for (var i = 0; i <= cols.length - 1; i++) {
+             arr[i] = new Array();
+             for (var j = 0; j <= col1.length - 1; j++) {
+                 arr[i][j] = cols[i][j];
+             }
+        }
+        return arr;
+    };
+
+    // Create the condition matrix
+    var arr = genCol();
 
 /********************
 * HTML manipulation
@@ -41,6 +63,10 @@ var Instructions = function(pages) {
 	var currentscreen = 0,
 	    timestamp;
 	    instruction_pages = pages;
+    var texts = ["You will also see the number of points you could have won by choosing the other cards.", "You will also be shown the maximum number of points you could have won on that trial. This may be the points you won from the card you chose, but it could also be the points you could have won by selecting a card from a different deck."];
+
+    console.log(condition);
+    console.log(arr);
 
     function isNumber(n) {
         return !isNaN(parseFloat(n)) && isFinite(n);
@@ -48,6 +74,14 @@ var Instructions = function(pages) {
 	
 	var next = function() {
 		psiTurk.showPage(instruction_pages[currentscreen]);
+        // Condition specific instructions
+        // Max value
+        if (arr[0][condition] == 2) {
+            document.getElementById("condText").innerHTML = texts[1];
+        }
+        else if (arr[0][condition] == 3) {
+            document.getElementById("condText").innerHTML = texts[0];
+        }
 		$('.continue').click(function() {
             var gender = $('form input[type=radio]:checked').val();
             // Make sure is a number
@@ -140,38 +174,17 @@ var TestPhase = function() {
     // compare relevant column and relevant row (psiTurk.condition + 1) against the manipulation if-condition:
     // e.g. For forgone=2 (show max) compare "2" to column=1, row=psiTurk.condition (careful of index), if True then deploy.
 
-    // Function to generate matrix of all conditions
-    var genCol = function() {
-        // The three individual columns
-        var col1 = [], col2 = [], col3 = [];
-        for (var n = 0; n < 10; n++) {col1 = col1.concat([1, 2, 3])}
-        for (n = 0; n < 15; n++) {col2 = col2.concat([1, 1, 1, 2, 2, 2])}
-        for (n = 1; n < 6; n++) {col3 = col3.concat([n, n, n, n, n, n])} // Careful: n starts at 1
-        // Converting three separate 1D arrays into one 3D array
-        var cols = [col1, col2, col3];
-        var arr = new Array();
-        for (var i = 0; i <= cols.length - 1; i++) {
-             arr[i] = new Array();
-             for (var j = 0; j <= col1.length - 1; j++) {
-                 arr[i][j] = cols[i][j];
-             }
-        }
-        return arr;
-    };
-
-    // Create the condition matrix
-    var arr = genCol();
 
     // Globals
-    var condition= psiTurk.taskdata.get('condition'); // Get condition from server (starts at 0)
     var seeds = [72, 21, 26, 135, 332];
-    var m = new MersenneTwister(seeds[arr[2][condition] - 1]);
+    var m = new MersenneTwister(seeds[arr[2][condition] - 1]); // -1 because seeds in column start at 1
     var lambda = 0.9836;
     var cardSelected = false;
     var cumulative = 0;
     var data = {};
     var trial = 1; // Initialising trial
     var maxTrial = 50; // Number of trials
+    var timestamp = new Date().getTime(); // Initialise record time as soon as new set of cards
 
     // Normal random number generator; Box-Muller transform (ignoring second random value returned 'y')
     var rnd = function rnd(mean, stDev) {
@@ -263,6 +276,7 @@ var TestPhase = function() {
 
         // When a card is selected
         $('._card').click(function () {
+            var rt = (new Date().getTime()) - timestamp; // Record time as soon as they've clicked
             // Prevent multiple cards being selected
             if (cardSelected == false) {
                 cardSelected = true;
@@ -301,6 +315,7 @@ var TestPhase = function() {
                 for (var x in data[trial]) {
                     console.log(x, data[trial][x]);
                 }
+                console.log('RT= ' + rt);
                 console.log('shuffDeck= ' + shuffDeck);
                 console.log('Sum= ' + (data[trial]['card1']['R'] + data[trial]['card2']['R'] + data[trial]['card3']['R'] + data[trial]['card4']['R']), "Running mean: " + cumulative/trial);
                 console.log('Condition= ' + condition);
@@ -323,18 +338,18 @@ var TestPhase = function() {
                     }, 1000);
                 }
 
-                // Save data to psiTurk object (via an array)
-                var trialSet = [];
-                trialSet.push(data[trial]['chosen_card'], data[trial]['chosen_value'], data[trial]['max_value'],
-                              data[trial]['trialNumber'], data[trial]['condition'], data[trial]['cumulative'],
-                              data[trial]['permutation'], data[trial]['gender'], data[trial]['age']);
-                for (var y = 1; y <= 4; y++) {
-                    trialSet.push('Card ' + y + ' R:');
-                    trialSet.push(data[trial]['card' + y]['R']);
-                    trialSet.push('Card ' + y + ' mu:');
-                    trialSet.push(data[trial]['card' + y]['mu']);
-                }
-                psiTurk.recordTrialData(trialSet);
+                // Save data to psiTurk object (via an array). After wait due to timestamp
+                    var trialSet = [];
+                    trialSet.push(data[trial]['chosen_card'], data[trial]['chosen_value'], data[trial]['max_value'],
+                                  data[trial]['trialNumber'], data[trial]['condition'], data[trial]['cumulative'],
+                                  data[trial]['permutation'], data[trial]['gender'], data[trial]['age'], rt);
+                    for (var y = 1; y <= 4; y++) {
+                        trialSet.push('Card ' + y + ' R:');
+                        trialSet.push(data[trial]['card' + y]['R']);
+                        trialSet.push('Card ' + y + ' mu:');
+                        trialSet.push(data[trial]['card' + y]['mu']);
+                    }
+                    psiTurk.recordTrialData(trialSet);
 
                 // Add delay to trials
                 setTimeout(function () {
@@ -345,6 +360,8 @@ var TestPhase = function() {
 
                     // Update cumulative scorer
                     $('._cumulative').html('<h1>Total: ' + cumulative + '</h1>');
+
+                    timestamp = new Date().getTime(); // Record time as soon as new set of cards, so doesn't include wait time
 
                     // Task finish condition
                     if (trial == maxTrial) {
