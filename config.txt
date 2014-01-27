@@ -7,35 +7,35 @@ title = Bandit task
 description = Choose optimal cards to obtain the highest reward.
 keywords = Judgement, Psychology
 question_url = http://localhost:22362/mturk
-max_assignments = 10
+max_assignments = 1
 hit_lifetime = 24
-reward = 1
-duration = 2
+reward = 1.00
+duration = 0.5
 us_only = true
 approve_requirement = 95
 using_sandbox = True
 
 [Database Parameters]
-database_url = mysql://root:PASSWORD@127.0.0.1/data
+database_url = mysql://root:toor@127.0.0.1/data
 table_name = testData
 
 [Server Parameters]
 host = localhost
 port = 22362
 cutoff_time = 30
-support_ie = true
+support_ie = True
 logfile = server.log
 loglevel = 2
-debug = true
+debug = True
 login_username = examplename
 login_pw = examplepassword
 num_workers = -1
 
 [Task Parameters]
-code_version = 1.0
+code_version = 1
 num_conds = 30
 num_counters = 1
-use_debriefing = 1
+use_debriefing = 0
 
 [Dashboard Parameters]
 login_username = 
