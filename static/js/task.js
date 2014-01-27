@@ -65,8 +65,8 @@ var Instructions = function(pages) {
 	    instruction_pages = pages;
     var texts = ["You will also see the number of points you could have won by choosing the other cards.", "You will also be shown the maximum number of points you could have won on that trial. This may be the points you won from the card you chose, but it could also be the points you could have won by selecting a card from a different deck."];
 
-    console.log(condition);
-    console.log(arr);
+    //console.log(condition);
+    //console.log(arr);
 
     function isNumber(n) {
         return !isNaN(parseFloat(n)) && isFinite(n);
@@ -241,7 +241,8 @@ var TestPhase = function() {
         var R = mu + rnd(0, 4.0);
 
         return {R: Math.round(R),
-                mu: mu
+                mu: mu,
+                fullR: R
         };
     };
 
@@ -254,6 +255,7 @@ var TestPhase = function() {
             // Assign values to specific 'card' in 'data'
             data[trial]['card' + i]['R'] = values.R;
             data[trial]['card' + i]['mu'] = values.mu;
+            data[trial]['card' + i]['fullR'] = values.fullR; // Recording unrounded R as error term added to mu
         }
         return data[trial];
     };
@@ -312,15 +314,15 @@ var TestPhase = function() {
                 data[trial]['age'] = demographic[1];
 
                 // For testing- iterate through data and print to console OLD DATA
-                for (var x in data[trial]) {
-                    console.log(x, data[trial][x]);
-                }
-                console.log('RT= ' + rt);
-                console.log('shuffDeck= ' + shuffDeck);
-                console.log('Sum= ' + (data[trial]['card1']['R'] + data[trial]['card2']['R'] + data[trial]['card3']['R'] + data[trial]['card4']['R']), "Running mean: " + cumulative/trial);
-                console.log('Condition= ' + condition);
-                console.log('Seed: ' + seeds[arr[2][condition] - 1]);
-		        console.log('0mu: ', data[0]['card1']['mu'], data[0]['card2']['mu'], data[0]['card3']['mu'], data[0]['card4']['mu']);
+//                for (var x in data[trial]) {
+//                    console.log(x, data[trial][x]);
+//                }
+//                console.log('RT= ' + rt);
+//                console.log('shuffDeck= ' + shuffDeck);
+//                console.log('Sum= ' + (data[trial]['card1']['R'] + data[trial]['card2']['R'] + data[trial]['card3']['R'] + data[trial]['card4']['R']), "Running mean: " + cumulative/trial);
+//                console.log('Condition= ' + condition);
+//                console.log('Seed: ' + seeds[arr[2][condition] - 1]);
+//		        console.log('0mu: ', data[0]['card1']['mu'], data[0]['card2']['mu'], data[0]['card3']['mu'], data[0]['card4']['mu']);
 
 
                 // Note: timings are not additive: all absolute and begin at 0
@@ -345,7 +347,7 @@ var TestPhase = function() {
                                   data[trial]['permutation'], data[trial]['gender'], data[trial]['age'], rt);
                     for (var y = 1; y <= 4; y++) {
                         trialSet.push('Card ' + y + ' R:');
-                        trialSet.push(data[trial]['card' + y]['R']);
+                        trialSet.push(data[trial]['card' + y]['fullR']); // Recording unrounded R as error term added to mu
                         trialSet.push('Card ' + y + ' mu:');
                         trialSet.push(data[trial]['card' + y]['mu']);
                     }

@@ -16,8 +16,8 @@ approve_requirement = 95
 using_sandbox = True
 
 [Database Parameters]
-database_url = sqlite:///participants.db
-table_name = turkdemo
+database_url = mysql://root:PASSWORD@127.0.0.1/data
+table_name = testDatat
 
 [Server Parameters]
 host = localhost
