@@ -277,11 +277,16 @@ var TestPhase = function() {
     var next = function() {
 
         // When a card is selected
-        $('._card').click(function () {
+        //$('._card').click(function () { // Commented out for automation
+        var rep = 0;
+        function myLoop() {
+            setTimeout( function() {
+                rep++;
+
             var rt = (new Date().getTime()) - timestamp; // Record time as soon as they've clicked
             // Prevent multiple cards being selected
-            if (cardSelected == false) {
-                cardSelected = true;
+//            if (cardSelected == false) {
+//                cardSelected = true;
 
                 // Initialise trial - 1 for first trial to use. Must initialise all levels
                 if (trial == 1) {
@@ -298,12 +303,14 @@ var TestPhase = function() {
 
 
                 // Show card picked
-                var card = $(this).find('p', 'first');
-                card.slideDown();
+                //var card = $(this).find('p', 'first'); // Commented out for automation
+                var card = Math.floor((Math.random()*4)+1);
+                //card.slideDown(); // Commented out for automation
 
                 // Record meta-information. All data recorded from 'data' level (vs. abstracted and randomised 'deck' level [counterbalancing of deck presentation order])
                 // Must add new added data to trialSet.push()
-                data[trial]['chosen_card'] = shuffDeck[parseInt(card.attr('id')) - 1]; // Randomised, so card.attr('id') no longer the same card & value as data[trial][cardX]. Going from deck --> data (level) so have to use indexOf + 1
+                //data[trial]['chosen_card'] = shuffDeck[parseInt(card.attr('id')) - 1]; // Randomised, so card.attr('id') no longer the same card & value as data[trial][cardX]. Going from deck --> data (level) so have to use indexOf + 1
+                data[trial]['chosen_card'] = shuffDeck[card - 1]; // Altered for automation
                 data[trial]['chosen_value'] = data[trial]['card'+ data[trial]['chosen_card']]['R']; // The opposite of 'chosen_card'; need to go from data --> deck
                 data[trial]['max_value'] = Math.max(data[trial]['card1']['R'], data[trial]['card2']['R'], data[trial]['card3']['R'], data[trial]['card4']['R']);
                 data[trial]['trialNumber'] = trial;
@@ -355,7 +362,7 @@ var TestPhase = function() {
                     psiTurk.saveData(); // Need to send data back to server every trial to avoid TOO LARGE PACKET error
 
                 // Add delay to trials
-                setTimeout(function () {
+//                setTimeout(function () {
 
                     // Re-hide all new cards and messages
                     $('._card p').hide();
@@ -368,6 +375,7 @@ var TestPhase = function() {
 
                     // Task finish condition
                     if (trial == maxTrial) {
+                        //psiTurk.saveData(); // Unnecessary
                         //psiTurk.recordBonus(); // How to use?
                         finish();
                     }
@@ -376,11 +384,21 @@ var TestPhase = function() {
 
                     setBlanks(); // Set p tags to '0' to prevent cheating (checking html between trials)
 
-                    cardSelected = false;
+//                    cardSelected = false;
 
-                }, 3000);
-            }
-        });
+
+
+//                }, 3000);
+
+//                }
+        //}
+        //});
+        if (rep < maxTrial) {
+            myLoop();
+        }
+        }, 3000);
+    }
+myLoop();
     };
 
     var finish = function() {

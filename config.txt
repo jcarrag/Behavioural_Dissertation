@@ -3,27 +3,27 @@ aws_access_key_id = YourAccessKeyId
 aws_secret_access_key = YourSecreteAccessKey
 
 [HIT Configuration]
-title = Bandit task
-description = Choose optimal cards to obtain the highest reward.
+title = Psychology Decision Making Task
+description = Up to $1.40 for 13 minute task: Choose optimal cards to obtain the highest reward. 10 cents bonus per 3000 points earned.
 keywords = Judgement, Psychology
-question_url = http://PUBLIC_IP:22362/mturk
-max_assignments = 1
-hit_lifetime = 24
+question_url = http://jcarrag.no-ip.org:22362/mturk
+max_assignments = 8
+hit_lifetime = 96
 reward = 1.00
-duration = 0.5
-us_only = true
+duration = 1
+us_only = 1
 approve_requirement = 95
-using_sandbox = True
+using_sandbox = False
 
 [Database Parameters]
-database_url = sqlite:///participants.db
-table_name = testData
+database_url = mysql://root:PASSWORD@127.0.0.1/data
+table_name = expData
 
 [Server Parameters]
 host = 0.0.0.0
 port = 22362
-cutoff_time = 30
-support_ie = 0
+cutoff_time = 40
+support_ie = 1
 logfile = server.log
 loglevel = 2
 debug = True
